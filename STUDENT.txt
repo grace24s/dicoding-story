@@ -4,3 +4,5 @@ Notes: If you use another map provider that requires API key, include it here.
 
 
 URL Github: https://github.com/grace24s/dicoding-story.git
+
+Deploy: https://grace24s.github.io/dicoding-story/
