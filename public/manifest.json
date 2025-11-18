@@ -2,7 +2,7 @@
   "name": "Dicoding Story - Penyelesaian",
   "short_name": "DicodingStory",
   "description": "Aplikasi berbagi story (PWA + Offline + Push + IndexedDB)",
-  "start_url": "/",
+  "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

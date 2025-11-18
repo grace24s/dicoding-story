@@ -1,4 +1,4 @@
-/* sw.js */
+/* public/sw.js */
 const CACHE_NAME = "dicoding-story-shell-v1";
 const RUNTIME_CACHE = "dicoding-runtime-v1";
 const API_BASE = "https://story-api.dicoding.dev/v1";
@@ -13,7 +13,6 @@ const STATIC_ASSETS = [
   "/src/api.js",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
-  // add others if needed
 ];
 
 self.addEventListener("install", (ev) => {
@@ -28,7 +27,6 @@ self.addEventListener("install", (ev) => {
 self.addEventListener("activate", (ev) => {
   ev.waitUntil(
     (async () => {
-      // remove old caches
       const keys = await caches.keys();
       await Promise.all(
         keys
@@ -40,26 +38,21 @@ self.addEventListener("activate", (ev) => {
   );
 });
 
-/* Fetch strategy:
-  - For navigation/app shell: cache-first (serve cached index.html)
-  - For API GET /stories: stale-while-revalidate (cache then network)
-  - For images: cache then network (LRU could be added)
-*/
 self.addEventListener("fetch", (ev) => {
   const req = ev.request;
   const url = new URL(req.url);
 
-  // Handle navigation -> app shell
   if (req.mode === "navigate") {
     ev.respondWith(
       fetch(req).catch(() =>
-        caches.match("/").then((res) => res || caches.match(OFFLINE_PAGE))
+        caches
+          .match("/index.html")
+          .then((res) => res || caches.match(OFFLINE_PAGE))
       )
     );
     return;
   }
 
-  // API stories (GET)
   if (
     url.origin === new URL(API_BASE).origin &&
     url.pathname.startsWith("/v1/stories") &&
@@ -87,7 +80,6 @@ self.addEventListener("fetch", (ev) => {
     return;
   }
 
-  // Images (photoUrl)
   if (
     req.destination === "image" ||
     url.pathname.includes("/images/stories/")
@@ -108,15 +100,14 @@ self.addEventListener("fetch", (ev) => {
     return;
   }
 
-  // default: try cache then network
   ev.respondWith(
     caches.match(req).then((cached) => {
-      return cached || fetch(req).catch(() => caches.match(OFFLINE_PAGE));
+      return cached || fetch(req).catch(() => caches.match("/index.html"));
     })
   );
 });
 
-/* PUSH Notifications */
+/* Push Notifications */
 self.addEventListener("push", (ev) => {
   let payload = {};
   try {
@@ -131,11 +122,9 @@ self.addEventListener("push", (ev) => {
   }
 
   const { title, options } = payload;
-  // ensure actions exist
   const actions = (options && options.actions) || [
     { action: "open_app", title: "Buka aplikasi" },
   ];
-
   const notifOptions = Object.assign({}, options, {
     actions,
     badge: "/icons/icon-192.png",
@@ -147,15 +136,12 @@ self.addEventListener("push", (ev) => {
   );
 });
 
-/* Notification click actions */
 self.addEventListener("notificationclick", (ev) => {
   ev.notification.close();
   const action = ev.action;
-
-  // If payload attached via data
-  const targetUrl =
-    (ev.notification && ev.notification.data && ev.notification.data.url) ||
-    "/#/";
+  const data = ev.notification && ev.notification.data;
+  const storyId = data && data.storyId;
+  const targetUrl = storyId ? `/#/detail?id=${storyId}` : "/#/";
 
   ev.waitUntil(
     (async () => {
@@ -163,24 +149,12 @@ self.addEventListener("notificationclick", (ev) => {
         includeUncontrolled: true,
         type: "window",
       });
-      let appClient = allClients.find((c) => c.visibilityState === "visible");
-      if (
-        action === "open_detail" &&
-        ev.notification.data &&
-        ev.notification.data.storyId
-      ) {
-        const url = `/#/detail/${ev.notification.data.storyId}`;
-        if (appClient) {
-          appClient.focus();
-          appClient.navigate(url);
-        } else {
-          clients.openWindow(url);
-        }
-        return;
-      }
-      if (appClient) {
-        appClient.focus();
-        appClient.navigate(targetUrl);
+      let client =
+        allClients.find((c) => c.visibilityState === "visible") ||
+        allClients[0];
+      if (client) {
+        client.focus();
+        client.navigate && client.navigate(targetUrl);
       } else {
         clients.openWindow(targetUrl);
       }
@@ -188,7 +162,7 @@ self.addEventListener("notificationclick", (ev) => {
   );
 });
 
-/* Background Sync: try to send queued stories */
+/* Background Sync handler (sync-stories-*) - keep as is if supported */
 self.addEventListener("sync", (ev) => {
   if (ev.tag && ev.tag.startsWith("sync-stories-")) {
     ev.waitUntil(syncQueuedStories());
@@ -196,7 +170,6 @@ self.addEventListener("sync", (ev) => {
 });
 
 async function syncQueuedStories() {
-  // open idb (simple approach using IndexedDB)
   try {
     const db = await openQueuedDB();
     const tx = db.transaction("outbox", "readwrite");
@@ -204,13 +177,10 @@ async function syncQueuedStories() {
     const items = await store.getAll();
     for (const item of items) {
       try {
-        // item has fields: description, file (as blob stored via put), lat, lon, token
         const form = new FormData();
         form.append("description", item.description);
-        if (item.photoBlob) {
-          const blob = item.photoBlob;
-          form.append("photo", blob, item.filename || "offline.jpg");
-        }
+        if (item.photoBlob)
+          form.append("photo", item.photoBlob, item.filename || "offline.jpg");
         if (item.lat) form.append("lat", item.lat);
         if (item.lon) form.append("lon", item.lon);
 
@@ -224,11 +194,9 @@ async function syncQueuedStories() {
         });
         const j = await resp.json();
         if (!j.error) {
-          // success -> remove from outbox
           await store.delete(item.id);
         }
       } catch (err) {
-        // keep item for next sync
         console.error("Sync item failed", err);
       }
     }
@@ -239,7 +207,6 @@ async function syncQueuedStories() {
   }
 }
 
-/* simple IDB open used only by SW for outbox retrieval */
 function openQueuedDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("dicoding-queued-db", 1);
@@ -253,3 +220,19 @@ function openQueuedDB() {
     req.onerror = (e) => reject(e.target.error);
   });
 }
+const OFFLINE_URL = "/offline.html";
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE_STATIC)
+      .then((cache) => cache.addAll([...STATIC_ASSETS, OFFLINE_URL]))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener("fetch", (event) => {
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(OFFLINE_URL))
+  );
+});

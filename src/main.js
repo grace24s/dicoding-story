@@ -142,6 +142,14 @@ async function unsubscribeUser(reg) {
   }
 }
 
+// saat SW ter-registrasi, beforeinstallprompt event di-handle oleh window listener (main.js)
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const box = document.getElementById("installPrompt");
+  if (box) box.hidden = false;
+});
+
 /* init */
 initServiceWorkerAndPush();
 r.render();
