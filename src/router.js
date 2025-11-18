@@ -1,4 +1,4 @@
-//router.js
+// src/router.js
 import HomePage from "./pages/home.js";
 import LoginPage from "./pages/login.js";
 import RegisterPage from "./pages/register.js";

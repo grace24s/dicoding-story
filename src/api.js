@@ -1,3 +1,4 @@
+// src/api.js
 const BASE = "https://story-api.dicoding.dev/v1";
 
 export async function register({ name, email, password }) {
