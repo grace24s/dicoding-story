@@ -1,5 +1,5 @@
 // src/pages/addStory.js
-import { addStory } from "../api.js";
+import { addStory, enqueueOutbox } from "../api.js";
 
 export default async function AddStoryPage() {
   const root = document.createElement("main");
@@ -39,9 +39,7 @@ export default async function AddStoryPage() {
     <div id="msg" role="status" aria-live="polite"></div>
   `;
 
-  // -----------------------------
-  // INIT MINI MAP (with delay)
-  // -----------------------------
+  // Mini map init
   setTimeout(() => {
     const map = L.map(root.querySelector("#mini-map")).setView([0, 0], 2);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(
@@ -65,9 +63,7 @@ export default async function AddStoryPage() {
     setTimeout(() => map.invalidateSize(true), 200);
   }, 0);
 
-  // -----------------------------
   // Camera
-  // -----------------------------
   let stream = null;
   const cameraWrap = root.querySelector("#cameraWrap");
 
@@ -76,8 +72,12 @@ export default async function AddStoryPage() {
 
     if (cameraWrap.hidden) {
       cameraWrap.hidden = false;
-      stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      video.srcObject = stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Kamera tidak dapat diakses: " + err.message);
+      }
     } else {
       if (stream) stream.getTracks().forEach((t) => t.stop());
       cameraWrap.hidden = true;
@@ -106,12 +106,9 @@ export default async function AddStoryPage() {
     stream = null;
   });
 
-  // -----------------------------
   // Submit
-  // -----------------------------
   root.querySelector("#storyForm").addEventListener("submit", async (ev) => {
     ev.preventDefault();
-
     const form = ev.target;
     const description = form.description.value.trim();
     const file = form.photo.files[0];
@@ -120,21 +117,81 @@ export default async function AddStoryPage() {
     const token = localStorage.getItem("token") || "";
 
     const msg = root.querySelector("#msg");
+
+    if (!description || !file) {
+      msg.textContent = "Deskripsi dan foto wajib diisi.";
+      msg.style.color = "var(--danger)";
+      return;
+    }
+
+    // If offline or fetch not available -> queue to outbox
+    if (!navigator.onLine || !window.fetch) {
+      msg.textContent = "Anda sedang offline — story akan dikirim saat online.";
+      msg.style.color = "";
+
+      // convert file to blob (we already have File -> it's a Blob)
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const arrayBuffer = reader.result;
+        const blob = new Blob([arrayBuffer], { type: file.type });
+
+        // enqueue with token so SW can send with proper auth if available
+        await enqueueOutbox({
+          description,
+          photoBlob: blob,
+          filename: file.name,
+          lat: lat || undefined,
+          lon: lon || undefined,
+          token: token || undefined,
+        });
+
+        // try to register sync
+        if ("serviceWorker" in navigator && "SyncManager" in window) {
+          const reg = await navigator.serviceWorker.ready;
+          try {
+            await reg.sync.register("sync-stories-" + Date.now());
+            console.log("Sync registered");
+          } catch (e) {
+            console.warn("Sync register failed", e);
+          }
+        }
+
+        // fallback: try to send when online via event
+        window.addEventListener(
+          "online",
+          async () => {
+            // try to post outbox items by reloading and letting SW handle sync or
+            // simply attempt to post here (but SW will handle if sync registered)
+          },
+          { once: true }
+        );
+
+        setTimeout(() => (location.hash = "#/"), 900);
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    // online -> send directly
     msg.textContent = "Mengirim...";
-
-    const res = await addStory({
-      token,
-      description,
-      file,
-      lat: lat || undefined,
-      lon: lon || undefined,
-    });
-
-    if (!res.error) {
-      msg.textContent = "Berhasil membuat story!";
-      location.hash = "#/";
-    } else {
-      msg.textContent = "Gagal: " + res.message;
+    try {
+      const res = await addStory({
+        token,
+        description,
+        file,
+        lat: lat || undefined,
+        lon: lon || undefined,
+      });
+      if (!res.error) {
+        msg.textContent = "Berhasil membuat story!";
+        setTimeout(() => (location.hash = "#/"), 700);
+      } else {
+        msg.textContent = "Gagal: " + (res.message || "error");
+        msg.style.color = "var(--danger)";
+      }
+    } catch (err) {
+      msg.textContent = "Network error!";
+      msg.style.color = "var(--danger)";
     }
   });
 

@@ -6,12 +6,31 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Dicoding Story - Penyelesaian</title>
+
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Theme color for PWA -->
+    <meta name="theme-color" content="#7b2cbf" />
+
     <link rel="stylesheet" href="/src/styles.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <div id="app"></div>
+
+    <div
+      id="installPrompt"
+      hidden
+      class="install-prompt"
+      role="dialog"
+      aria-live="polite"
+    >
+      <p>Aplikasi ini bisa diinstall ke device Anda.</p>
+      <button id="btnInstall">Install</button>
+      <button id="btnDismissInstall">Tutup</button>
+    </div>
 
     <script type="module" src="/src/main.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>

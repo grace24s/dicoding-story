@@ -4,17 +4,13 @@ export default async function DetailPage() {
   root.id = "main";
   root.innerHTML = `<p style="text-align:center">Loading story...</p>`;
 
-  // ambil id baik dari format /detail/ID atau /detail?id=ID
+  // accept both /#/detail/ID and ?id=ID
   const hash = window.location.hash || "";
   let id = null;
-
-  // format #/detail/ID
   const parts = hash.split("/");
   if (parts.length >= 3 && parts[2]) {
     id = parts[2].split("?")[0];
   }
-
-  // jika masih null, coba query param ?id=
   if (!id) {
     const q = new URLSearchParams(hash.split("?")[1] || "");
     id = q.get("id");
@@ -68,13 +64,9 @@ export default async function DetailPage() {
       </section>
     `;
 
-    // back button handler
     const backBtn = root.querySelector(".back-btn");
-    backBtn.addEventListener("click", () => {
-      window.history.back();
-    });
+    backBtn.addEventListener("click", () => window.history.back());
 
-    // map
     const lat = story.lat;
     const lon = story.lon;
     const mapDiv = root.querySelector("#map");

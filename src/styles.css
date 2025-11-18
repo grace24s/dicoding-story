@@ -234,3 +234,30 @@ button:hover {
   border: none;
   cursor: pointer;
 }
+/* push toggle */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.push-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.push-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+/* install prompt dialog */
+.install-prompt {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 200;
+}
