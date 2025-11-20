@@ -7,40 +7,31 @@ export default async function HomePage() {
   root.id = "main";
 
   root.innerHTML = `
-    <header>
-      
-      <nav>
-        <a href="#/add">Tambah Story</a>
-        <button id="logoutBtn" class="btn-logout">Logout</button>
-      </nav>
-    </header>
-
     <section id="list">
       <h2>Daftar Story</h2>
+
+      <div class="story-controls">
+        <input id="searchInput" placeholder="Cari story..." />
+        <select id="sortSelect">
+          <option value="newest">Terbaru</option>
+          <option value="oldest">Terlama</option>
+          <option value="name-asc">Nama A → Z</option>
+          <option value="name-desc">Nama Z → A</option>
+        </select>
+      </div>
+
       <ul aria-live="polite"></ul>
     </section>
-    
-<div class="story-controls">
-  <input id="searchInput" placeholder="Cari story..." />
-  <select id="sortSelect">
-    <option value="newest">Terbaru</option>
-    <option value="oldest">Terlama</option>
-    <option value="name-asc">Nama A → Z</option>
-    <option value="name-desc">Nama Z → A</option>
-  </select>
-</div>
 
     <section id="map" aria-label="Peta cerita" style="margin-top:12px"></section>
   `;
 
-  root.querySelector("#logoutBtn").addEventListener("click", () => {
-    localStorage.clear();
-    location.hash = "#/login";
-  });
+  // ---- LOGOUT DIPINDAHKAN KE GLOBAL HEADER ----
+  // Tidak ada logout di Home lagi
 
   const token = localStorage.getItem("token") || "";
-  let apiStories = []; // raw stories from API (if available)
-  let usedSource = "api"; // "api" or "local"
+  let apiStories = [];
+  let usedSource = "api";
 
   // Try fetch API
   try {
@@ -48,9 +39,7 @@ export default async function HomePage() {
     if (!res || res.error) throw new Error("API error");
     apiStories = res.listStory || [];
     usedSource = "api";
-    // IMPORTANT: DO NOT auto-save API result to IndexedDB here.
   } catch (err) {
-    // fallback to local DB
     const local = await getStoriesLocal();
     if (local && local.length) {
       apiStories = local;
@@ -86,16 +75,15 @@ export default async function HomePage() {
         ((st.description || "").length > 120 ? "..." : "");
 
       li.innerHTML = `
-        <img src="${
-          st.photoUrl || "/icons/icon-192.png"
-        }" alt="Foto story oleh ${
-        st.name
-      }" style="width:120px; height:80px; object-fit:cover; border-radius:8px; border:2px solid #e4d4ff;" />
+        <img src="${st.photoUrl || "/icons/icon-192.png"}"
+             alt="Foto story oleh ${st.name}"
+             style="width:120px;height:80px;object-fit:cover;border-radius:8px;border:2px solid #e4d4ff;" />
+
         <div style="flex:1">
-          <strong style="display:block; margin-bottom:6px;">${st.name}</strong>
+          <strong style="display:block;margin-bottom:6px;">${st.name}</strong>
           <p style="margin:0 0 6px">${descShort}</p>
           <small style="color:#6f5c82">Dibuat: ${createdText}</small>
-          <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
             <a href="#/detail?id=${st.id}" class="btn-view">Lihat</a>
             <button class="btn-save-local" data-id="${
               st.id
@@ -105,7 +93,7 @@ export default async function HomePage() {
             }">Hapus Lokal</button>
             <span class="local-status" data-id="${
               st.id
-            }" style="margin-left:8px; color:#2a7f2a;"></span>
+            }" style="margin-left:8px;color:#2a7f2a;"></span>
           </div>
         </div>
       `;
@@ -119,12 +107,11 @@ export default async function HomePage() {
     let filtered = list.slice();
 
     if (q) {
-      filtered = filtered.filter((s) => {
-        return (
+      filtered = filtered.filter(
+        (s) =>
           (s.name && s.name.toLowerCase().includes(q)) ||
           (s.description && s.description.toLowerCase().includes(q))
-        );
-      });
+      );
     }
 
     const sort = sortSelect.value;
@@ -141,13 +128,12 @@ export default async function HomePage() {
     } else if (sort === "name-desc") {
       filtered.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
     }
+
     return filtered;
   }
 
-  // initial render
   renderList(applySearchAndSort(apiStories));
 
-  // update saved-local status
   async function refreshLocalStatus() {
     const local = await getStoriesLocal();
     const set = new Set((local || []).map((s) => s.id));
@@ -157,17 +143,16 @@ export default async function HomePage() {
     });
   }
 
-  // event: search + sort
   searchInput.addEventListener("input", () => {
     renderList(applySearchAndSort(apiStories));
     refreshLocalStatus();
   });
+
   sortSelect.addEventListener("change", () => {
     renderList(applySearchAndSort(apiStories));
     refreshLocalStatus();
   });
 
-  // event delegation for save / delete buttons
   root.addEventListener("click", async (ev) => {
     const t = ev.target;
     if (t.matches(".btn-save-local")) {
@@ -179,7 +164,6 @@ export default async function HomePage() {
         t.disabled = true;
         await refreshLocalStatus();
       } catch (err) {
-        console.error("saveStoryLocal failed", err);
         alert("Gagal menyimpan lokal.");
       }
     } else if (t.matches(".btn-delete-local")) {
@@ -188,26 +172,23 @@ export default async function HomePage() {
         await deleteStoryLocal(id);
         await refreshLocalStatus();
       } catch (err) {
-        console.error("deleteStoryLocal failed", err);
         alert("Gagal menghapus lokal.");
       }
     }
   });
 
-  // initial status check
   await refreshLocalStatus();
 
-  // map init
+  // Map init
   setTimeout(() => initMap(apiStories || []), 0);
 
   function initMap(stories) {
     const mapDiv = root.querySelector("#map");
     if (!mapDiv) return;
 
-    // make map container visible
     mapDiv.style.minHeight = "300px";
 
-    const map = L.map(mapDiv, { zoomControl: true }).setView([0, 0], 2);
+    const map = L.map(mapDiv).setView([0, 0], 2);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap contributors",
     }).addTo(map);
@@ -222,7 +203,7 @@ export default async function HomePage() {
           ${st.description ? st.description.slice(0, 120) : ""}<br>
           <img src="${
             st.photoUrl || "/icons/icon-192.png"
-          }" style="width:150px; margin-top:6px;">
+          }" style="width:150px;margin-top:6px;">
         `);
       }
     });

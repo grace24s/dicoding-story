@@ -16,13 +16,15 @@ header.innerHTML = `
   <a href="#/">Home</a>
   <a href="#/add">Tambah Story</a>
   <a href="#/login">Login</a>
+  <button id="logoutBtn" class="btn-logout" style="margin-left:12px">Logout</button>
 </nav>
+
 <div class="header-actions">
   <label id="pushLabel" class="push-toggle">
-  <input id="pushToggle" type="checkbox" />
-  <span class="toggle-slider"></span>
-  <span>Push Notifications</span>
-</label>
+    <input id="pushToggle" type="checkbox" />
+    <span class="toggle-slider"></span>
+    <span>Push Notifications</span>
+  </label>
 </div>
 `;
 app.appendChild(header);
@@ -142,6 +144,12 @@ async function unsubscribeUser(reg) {
     return false;
   }
 }
+document.addEventListener("click", (ev) => {
+  if (ev.target.id === "logoutBtn") {
+    localStorage.clear();
+    location.hash = "#/login";
+  }
+});
 
 // saat SW ter-registrasi, beforeinstallprompt event di-handle oleh window listener (main.js)
 window.addEventListener("beforeinstallprompt", (e) => {

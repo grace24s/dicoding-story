@@ -17,37 +17,43 @@ const STATIC_ASSETS = [
   "/icons/icon-512.png",
 ];
 
-/* ---------------- INSTALL ---------------- */
-self.addEventListener("install", (ev) => {
-  ev.waitUntil(
+/* ================================
+   INSTALL
+================================ */
+self.addEventListener("install", (event) => {
+  event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
 
-/* ---------------- ACTIVATE ---------------- */
-self.addEventListener("activate", (ev) => {
-  ev.waitUntil(
+/* ================================
+   ACTIVATE
+================================ */
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
     (async () => {
       const keys = await caches.keys();
       await Promise.all(
         keys
-          .filter((k) => k !== CACHE_NAME && k !== RUNTIME_CACHE)
-          .map((k) => caches.delete(k))
+          .filter((key) => key !== CACHE_NAME && key !== RUNTIME_CACHE)
+          .map((key) => caches.delete(key))
       );
       await self.clients.claim();
     })()
   );
 });
 
-/* ---------------- FETCH ---------------- */
-self.addEventListener("fetch", (ev) => {
-  const req = ev.request;
+/* ================================
+   FETCH HANDLER
+================================ */
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
   const url = new URL(req.url);
 
-  // SPA navigation
+  // SPA - navigasi HTML
   if (req.mode === "navigate") {
-    ev.respondWith(
+    event.respondWith(
       fetch(req).catch(() =>
         caches
           .match("/index.html")
@@ -57,19 +63,19 @@ self.addEventListener("fetch", (ev) => {
     return;
   }
 
-  // API caching: GET /v1/stories
+  // Caching API Stories (GET /v1/stories)
   if (
     url.origin === new URL(API_BASE).origin &&
     url.pathname.startsWith("/v1/stories") &&
     req.method === "GET"
   ) {
-    ev.respondWith(
+    event.respondWith(
       caches.open(RUNTIME_CACHE).then(async (cache) => {
         const cached = await cache.match(req);
         const network = fetch(req)
-          .then((resp) => {
-            if (resp && resp.ok) cache.put(req, resp.clone());
-            return resp;
+          .then((response) => {
+            if (response && response.ok) cache.put(req, response.clone());
+            return response;
           })
           .catch(() => null);
 
@@ -85,17 +91,17 @@ self.addEventListener("fetch", (ev) => {
     return;
   }
 
-  // Image caching
+  // Caching image
   if (req.destination === "image") {
-    ev.respondWith(
+    event.respondWith(
       caches.open(RUNTIME_CACHE).then(async (cache) => {
         const cached = await cache.match(req);
         if (cached) return cached;
 
         try {
-          const resp = await fetch(req);
-          if (resp.ok) cache.put(req, resp.clone());
-          return resp;
+          const response = await fetch(req);
+          if (response.ok) cache.put(req, response.clone());
+          return response;
         } catch (err) {
           return caches.match("/icons/icon-192.png");
         }
@@ -104,85 +110,106 @@ self.addEventListener("fetch", (ev) => {
     return;
   }
 
-  // Default: network first → fallback cache
-  ev.respondWith(
+  // Default network-first
+  event.respondWith(
     fetch(req).catch(() =>
       caches.match(req).catch(() => caches.match(OFFLINE_PAGE))
     )
   );
 });
 
-/* ---------------- PUSH ---------------- */
-self.addEventListener("push", (ev) => {
+/* ================================
+   PUSH NOTIFICATION
+================================ */
+self.addEventListener("push", (event) => {
+  console.log("SW: Push received");
+
+  // permission harus granted
+  if (Notification.permission !== "granted") {
+    console.warn("SW: Notification permission not granted");
+    return;
+  }
+
   let payload = {};
   try {
-    payload = ev.data
-      ? ev.data.json()
-      : { title: "Notification", options: { body: "You have a notification" } };
+    payload = event.data
+      ? event.data.json()
+      : {
+          title: "Notification",
+          options: { body: "Anda mendapat notifikasi" },
+        };
   } catch (e) {
     payload = {
       title: "Notification",
-      options: { body: ev.data ? ev.data.text() : "You have a notification" },
+      options: {
+        body: event.data ? event.data.text() : "Anda mendapat notifikasi",
+      },
     };
   }
 
   const { title, options } = payload;
 
-  const actions = options.actions || [
-    { action: "open_app", title: "Buka aplikasi" },
-  ];
-
   const notifOptions = {
     ...options,
-    actions,
-    badge: "/icons/icon-192.png",
     icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    actions: options.actions || [
+      { action: "open_app", title: "Buka aplikasi" },
+    ],
   };
 
-  ev.waitUntil(
+  event.waitUntil(
     self.registration.showNotification(title || "Dicoding Story", notifOptions)
   );
 });
 
-/* ---------------- PUSH CLICK ---------------- */
-self.addEventListener("notificationclick", (ev) => {
-  ev.notification.close();
+/* ================================
+   PUSH CLICK HANDLER
+================================ */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
 
-  const storyId = ev.notification?.data?.storyId;
-  const targetUrl = storyId ? `/#/detail?id=${storyId}` : "/#/";
+  const storyId = event.notification?.data?.storyId;
+  const target = storyId ? `/#/detail?id=${storyId}` : "/#/";
 
-  ev.waitUntil(
+  event.waitUntil(
     (async () => {
-      const clientsList = await clients.matchAll({
+      const allClients = await clients.matchAll({
         includeUncontrolled: true,
         type: "window",
       });
+
       let client =
         allClients.find((c) => c.visibilityState === "visible") ||
         allClients[0];
+
       if (client) {
         client.focus();
-        client.navigate?.(targetUrl);
+        client.navigate?.(target);
       } else {
-        clients.openWindow(targetUrl);
+        clients.openWindow(target);
       }
     })()
   );
 });
 
-/* Background Sync handler (sync-stories-*) - keep as is if supported */
-self.addEventListener("sync", (ev) => {
-  if (ev.tag.startsWith("sync-stories-")) {
-    ev.waitUntil(syncQueuedStories());
+/* ================================
+   BACKGROUND SYNC (Remain Unchanged)
+================================ */
+self.addEventListener("sync", (event) => {
+  if (event.tag.startsWith("sync-stories-")) {
+    event.waitUntil(syncQueuedStories());
   }
 });
 
+/* Queue Sync Helper */
 async function syncQueuedStories() {
   try {
     const db = await openQueuedDB();
     const tx = db.transaction("outbox", "readwrite");
     const store = tx.objectStore("outbox");
     const items = await store.getAll();
+
     for (const item of items) {
       try {
         const form = new FormData();
@@ -195,19 +222,22 @@ async function syncQueuedStories() {
         const headers = item.token
           ? { Authorization: `Bearer ${item.token}` }
           : {};
-        const resp = await fetch(`${API_BASE}/stories`, {
+
+        const response = await fetch(`${API_BASE}/stories`, {
           method: "POST",
           body: form,
           headers,
         });
-        const j = await resp.json();
-        if (!j.error) {
+
+        const json = await response.json();
+        if (!json.error) {
           await store.delete(item.id);
         }
       } catch (err) {
-        console.error("Sync item failed", err);
+        console.error("Sync failed for item", err);
       }
     }
+
     await tx.complete;
     db.close();
   } catch (err) {
@@ -215,6 +245,7 @@ async function syncQueuedStories() {
   }
 }
 
+/* IndexedDB Helper */
 function openQueuedDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("dicoding-queued-db", 1);
@@ -228,19 +259,3 @@ function openQueuedDB() {
     req.onerror = (e) => reject(e.target.error);
   });
 }
-const OFFLINE_URL = "/offline.html";
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_STATIC)
-      .then((cache) => cache.addAll([...STATIC_ASSETS, OFFLINE_URL]))
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(OFFLINE_URL))
-  );
-});
