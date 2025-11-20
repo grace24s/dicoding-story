@@ -30,7 +30,7 @@
           <p style="margin:0 0 6px">${l}</p>
           <small style="color:#6f5c82">Dibuat: ${p}</small>
           <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
-            <a href="#/detail?id=${s.id}">Lihat</a>
+            <a href="#/detail?id=${s.id}" class="btn-view">Lihat</a>
             <button class="btn-save-local" data-id="${s.id}">Simpan Lokal</button>
             <button class="btn-delete-local" data-id="${s.id}">Hapus Lokal</button>
             <span class="local-status" data-id="${s.id}" style="margin-left:8px; color:#2a7f2a;"></span>
@@ -141,8 +141,9 @@
 </nav>
 <div class="header-actions">
   <label id="pushLabel" class="push-toggle">
-    <input id="pushToggle" type="checkbox" />
-    <span>Push Notifications</span>
-  </label>
+  <input id="pushToggle" type="checkbox" />
+  <span class="toggle-slider">Push Notifications</span>
+  
+</label>
 </div>
 `;k.appendChild(T);const v=document.createElement("div");v.id="root-view";k.appendChild(v);const U=W(v);window.addEventListener("hashchange",()=>{setTimeout(()=>{const e=v.querySelector("main");e&&(e.setAttribute("tabindex","-1"),e.focus())},350)});let f=null;async function K(){if("serviceWorker"in navigator)try{const e=await navigator.serviceWorker.register("/sw.js");console.log("Service Worker registered",e),window.addEventListener("beforeinstallprompt",t=>{t.preventDefault(),f=t;const n=document.getElementById("installPrompt");n&&(n.hidden=!1)});const o=document.getElementById("btnInstall"),r=document.getElementById("btnDismissInstall");o&&o.addEventListener("click",async()=>{if(!f)return;f.prompt();const t=await f.userChoice;f=null,document.getElementById("installPrompt").hidden=!0}),r&&r.addEventListener("click",()=>{document.getElementById("installPrompt").hidden=!0});const a=document.getElementById("pushToggle");if(a){const t=await V(e);a.checked=t,a.addEventListener("change",async n=>{n.target.checked?await E(e):await q(e)})}}catch(e){console.error("SW register failed",e)}else console.log("Service Worker not supported")}async function V(e){try{return!!await e.pushManager.getSubscription()}catch{return!1}}async function E(e){try{const o=await e.pushManager.subscribe({userVisibleOnly:!0,applicationServerKey:I(D)}),r=localStorage.getItem("token");return await A({token:r,subscription:{endpoint:o.endpoint,keys:o.toJSON().keys}}),!0}catch(o){return console.error("subscribe failed",o),!1}}async function q(e){try{const o=await e.pushManager.getSubscription(),r=localStorage.getItem("token");return o&&(await B({token:r,endpoint:o.endpoint}),await o.unsubscribe()),!0}catch(o){return console.error("unsubscribe failed",o),!1}}window.addEventListener("beforeinstallprompt",e=>{e.preventDefault(),f=e;const o=document.getElementById("installPrompt");o&&(o.hidden=!1)});K();U.render();window.__app={subscribeUser:E,unsubscribeUser:q};
