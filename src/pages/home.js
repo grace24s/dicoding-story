@@ -8,7 +8,7 @@ export default async function HomePage() {
 
   root.innerHTML = `
     <header>
-      <h1>Dicoding Story</h1>
+      
       <nav>
         <a href="#/add">Tambah Story</a>
         <button id="logoutBtn" class="btn-logout">Logout</button>
@@ -19,7 +19,8 @@ export default async function HomePage() {
       <h2>Daftar Story</h2>
       <ul aria-live="polite"></ul>
     </section>
-<div style="display:flex; gap:12px; margin-bottom:12px;">
+    
+<div class="story-controls">
   <input id="searchInput" placeholder="Cari story..." />
   <select id="sortSelect">
     <option value="newest">Terbaru</option>
@@ -95,7 +96,7 @@ export default async function HomePage() {
           <p style="margin:0 0 6px">${descShort}</p>
           <small style="color:#6f5c82">Dibuat: ${createdText}</small>
           <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
-            <a href="#/detail?id=${st.id}">Lihat</a>
+            <a href="#/detail?id=${st.id}" class="btn-view">Lihat</a>
             <button class="btn-save-local" data-id="${
               st.id
             }">Simpan Lokal</button>

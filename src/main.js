@@ -19,9 +19,10 @@ header.innerHTML = `
 </nav>
 <div class="header-actions">
   <label id="pushLabel" class="push-toggle">
-    <input id="pushToggle" type="checkbox" />
-    <span>Push Notifications</span>
-  </label>
+  <input id="pushToggle" type="checkbox" />
+  <span class="toggle-slider"></span>
+  <span>Push Notifications</span>
+</label>
 </div>
 `;
 app.appendChild(header);

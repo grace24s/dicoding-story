@@ -144,6 +144,129 @@ textarea:focus {
   box-shadow: 0 0 0 3px #e0c8ff;
 }
 
+/* ======= PUSH NOTIFICATION TOGGLE (PREMIUM STYLE) ======= */
+.push-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  color: #4b2b7f;
+}
+
+/* Hide the raw checkbox */
+.push-toggle input[type="checkbox"] {
+  display: none;
+}
+
+/* Track */
+.push-toggle .toggle-slider {
+  width: 46px;
+  height: 24px;
+  background: #d8c9f5;
+  border-radius: 50px;
+  position: relative;
+  transition: all 0.25s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Thumb */
+.push-toggle .toggle-slider::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* When checked */
+.push-toggle input[type="checkbox"]:checked + .toggle-slider {
+  background: linear-gradient(90deg, #7b2cbf, #c8a2ff);
+}
+
+.push-toggle input[type="checkbox"]:checked + .toggle-slider::after {
+  transform: translateX(22px);
+}
+
+/* Pretty "Lihat" link button */
+.btn-view {
+  display: inline-block;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, #7b2cbf, #c8a2ff);
+  color: white;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 15px rgba(123, 44, 191, 0.3);
+  transition: all 0.25s ease;
+}
+
+.btn-view:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(123, 44, 191, 0.4);
+}
+
+.btn-view:active {
+  transform: scale(0.97);
+}
+
+/* Gaya untuk kontainer utama */
+.story-controls {
+  display: flex; /* Menggunakan Flexbox untuk menata item */
+  gap: 12px; /* Jarak antar item (input dan select) */
+  margin-bottom: 24px; /* Jarak di bawah komponen */
+  padding: 10px; /* Padding di sekitar komponen */
+  background-color: #f8f8f8; /* Warna latar belakang ringan */
+  border-radius: 8px; /* Sudut membulat */
+  align-items: center; /* Memastikan item sejajar vertikal di tengah */
+  flex-wrap: wrap; /* Memungkinkan item turun ke baris baru jika layar kecil */
+}
+
+/* Gaya untuk input pencarian */
+#searchInput {
+  flex-grow: 1; /* Memungkinkan input mengambil sisa ruang yang tersedia */
+  padding: 10px 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+  outline: none; /* Menghilangkan border biru saat fokus */
+  transition: border-color 0.3s;
+}
+
+#searchInput:focus {
+  border-color: #007bff; /* Border biru saat fokus */
+}
+
+/* Gaya untuk select box pengurutan */
+#sortSelect {
+  padding: 10px 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+  background-color: white;
+  cursor: pointer;
+  min-width: 150px; /* Lebar minimum agar opsi terlihat jelas */
+}
+
+/* Gaya untuk membuatnya responsif di layar yang sangat kecil (opsional) */
+@media (max-width: 480px) {
+  .story-controls {
+    flex-direction: column; /* Ubah tata letak menjadi vertikal */
+    gap: 16px;
+  }
+
+  #searchInput,
+  #sortSelect {
+    width: 100%; /* Ambil lebar penuh */
+  }
+}
+
 /* buttons */
 button,
 .btn {
