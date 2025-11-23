@@ -119,18 +119,18 @@ self.addEventListener("fetch", (event) => {
 });
 
 /* ================================
-   PUSH NOTIFICATION
+   PUSH NOTIFICATION (FIXED)
 ================================ */
 self.addEventListener("push", (event) => {
   console.log("SW: Push received");
 
-  // permission harus granted
   if (Notification.permission !== "granted") {
     console.warn("SW: Notification permission not granted");
     return;
   }
 
   let payload = {};
+
   try {
     payload = event.data
       ? event.data.json()
@@ -147,15 +147,20 @@ self.addEventListener("push", (event) => {
     };
   }
 
-  const { title, options } = payload;
+  // ⬅️ FIX: selalu beri default kosong agar tidak undefined
+  const { title, options = {} } = payload;
+
+  // ⬅️ FIX: actions tidak akan error meski options.actions undefined
+  const actions =
+    options.actions && Array.isArray(options.actions)
+      ? options.actions
+      : [{ action: "open_app", title: "Buka aplikasi" }];
 
   const notifOptions = {
     ...options,
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
-    actions: options.actions || [
-      { action: "open_app", title: "Buka aplikasi" },
-    ],
+    actions,
   };
 
   event.waitUntil(

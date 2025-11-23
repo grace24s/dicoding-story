@@ -113,19 +113,34 @@ async function isSubscribed(reg) {
 
 async function subscribeUser(reg) {
   try {
+    // Wajib minta izin notifikasi dulu
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      alert("Izin notifikasi ditolak.");
+      document.getElementById("pushToggle").checked = false;
+      return false;
+    }
+
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
     });
-    // send to server
+
     const token = localStorage.getItem("token");
+
+    // Format WAJIB : endpoint + keys lengkap
     await subscribeServer({
       token,
-      subscription: { endpoint: sub.endpoint, keys: sub.toJSON().keys },
+      subscription: {
+        endpoint: sub.endpoint,
+        keys: sub.toJSON().keys,
+      },
     });
+
     return true;
   } catch (err) {
     console.error("subscribe failed", err);
+    document.getElementById("pushToggle").checked = false;
     return false;
   }
 }
@@ -134,16 +149,23 @@ async function unsubscribeUser(reg) {
   try {
     const sub = await reg.pushManager.getSubscription();
     const token = localStorage.getItem("token");
+
     if (sub) {
-      await unsubscribeServer({ token, endpoint: sub.endpoint });
+      await unsubscribeServer({
+        token,
+        endpoint: sub.endpoint,
+      });
+
       await sub.unsubscribe();
     }
+
     return true;
   } catch (err) {
     console.error("unsubscribe failed", err);
     return false;
   }
 }
+
 document.addEventListener("click", (ev) => {
   if (ev.target.id === "logoutBtn") {
     localStorage.clear();
@@ -152,11 +174,13 @@ document.addEventListener("click", (ev) => {
 });
 
 // saat SW ter-registrasi, beforeinstallprompt event di-handle oleh window listener (main.js)
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  const box = document.getElementById("installPrompt");
-  if (box) box.hidden = false;
+pushToggle.addEventListener("change", async (ev) => {
+  if (ev.target.checked) {
+    const ok = await subscribeUser(reg);
+    if (!ok) ev.target.checked = false;
+  } else {
+    await unsubscribeUser(reg);
+  }
 });
 
 /* init */
